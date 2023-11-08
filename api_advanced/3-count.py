@@ -1,52 +1,42 @@
 #!/usr/bin/python3
-
-"""
-This module uses recursion to get hot articles
-"""
+""" This module uses recursion to get hot articles"""
 
 import json
 import requests
 
-def count_words(subreddit, word_list, after=None, hot_list=None):
-    """
-    Function that queries the Reddit API.
-    """
-    if hot_list is None:
-        hot_list = [0] * len(word_list)
+
+def count_words(subreddit, word_list, after=None, word_count=None):
+    if word_count is None:
+        word_count = {}
 
     if after is None:
-        url = "https://www.reddit.com/r/{}/hot.json".format(subreddit)
+        url = 'https://www.reddit.com/r/{}/hot/.json'.format(subreddit)
     else:
-        url = "https://www.reddit.com/r/{}/hot.json?after={}".format(subreddit, after)
+        url = 'https://www.reddit.com/r/{}/hot/.json?after={}'.format(subreddit, after)
 
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {'User-agent': 'Mozilla/5.0'}
     response = requests.get(url, headers=headers, allow_redirects=False)
 
-    if response.status_code == 200:
-        data = response.json()
+    if response.status_code != 200:
+        return
 
-        for topic in data['data']['children']:
-            for word in topic['data']['title'].split():
-                for i in range(len(word_list)):
-                    if word_list[i].lower() == word.lower():
-                        hot_list[i] += 1
+    data = response.json()
+    posts = data['data']['children']
 
-        after = data['data']['after']
+    for post in posts:
+        title = post['data']['title'].lower().split()
+        for word in word_list:
+            word_count[word.lower()] = word_count.get(word.lower(), 0) + title.count(word.lower())
 
-        if after is None:
-            save = set()
-            for i in range(len(word_list)):
-                for j in range(i + 1, len(word_list)):
-                    if word_list[i].lower() == word_list[j].lower():
-                        save.add(j)
-                        hot_list[i] += hot_list[j]
+    after = data['data']['after']
 
-            sorted_indices = sorted(range(len(word_list)), key=lambda k: (-hot_list[k], word_list[k].lower()))
-            for i in sorted_indices:
-                if hot_list[i] > 0 and i not in save:
-                    print("{}: {}".format(word_list[i].lower(), hot_list[i]))
-        else:
-            count_words(subreddit, word_list, after, hot_list)
+    if after is not None:
+        count_words(subreddit, word_list, after, word_count)
+    else:
+        sorted_word_count = sorted(word_count.items(), key=lambda x: (-x[1], x[0].lower()))
+        for word, count in sorted_word_count:
+            print('{}: {}'.format(word, count))
+
 
 if __name__ == '__main__':
-    count_words('unpopular', ['down', 'vote', 'downvote', 'you', 'her', 'unpopular', 'politics'])
+    count_words('programming', ['react', 'python', 'java', 'javascript', 'scala', 'no_results_for_this_one'])
