@@ -1,11 +1,16 @@
 #!/usr/bin/python3
-"""This module uses recursion to get hot articles"""
+
+"""
+This module uses recursion to get hot articles
+"""
 
 import json
 import requests
 
 def count_words(subreddit, word_list, after=None, hot_list=None):
-    """Function that queries the Reddit API."""
+    """
+    Function that queries the Reddit API.
+    """
     if hot_list is None:
         hot_list = [0] * len(word_list)
 
@@ -44,4 +49,4 @@ def count_words(subreddit, word_list, after=None, hot_list=None):
             count_words(subreddit, word_list, after, hot_list)
 
 if __name__ == '__main__':
-    count_words('programming', ['react', 'python', 'java', 'javascript', 'scala', 'no_results_for_this_one'])
+    count_words('unpopular', ['down', 'vote', 'downvote', 'you', 'her', 'unpopular', 'politics'])
