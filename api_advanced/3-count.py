@@ -42,4 +42,3 @@ if __name__ == "__main__":
     else:
         for word, count in word_counts.items():
             print(f"{word.strip()}: {count}")
-   
