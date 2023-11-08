@@ -1,46 +1,72 @@
 #!/usr/bin/python3
-"""
-Queries the Reddit API and returns the number of subscribers
-for a given subreddit
-"""
+
+"""search post function"""
+
+import json
+import operator
 import requests
 
-def count_words(subreddit, word_list, after=None, counts=None):
-    if counts is None:
-        counts = {word.lower(): 0 for word in word_list}
-    
+
+def count_words(subreddit, word_list, after=None):
+    """get all the keyword count"""
+
+    if len(word_list) == 0:
+        print(None)
+        return
+    url = "https://www.reddit.com/r/{}/hot.json".format(subreddit)
     headers = {"User-Agent": "Mozilla/5.0"}
-    params = {"after": after, "limit": 100}
-    url = f"https://www.reddit.com/r/{subreddit}/hot/.json"
-    response = requests.get(url, headers=headers, params=params,
-                            allow_redirects=False)
-    
-    if response.status_code != 200:
+    result = requests.get(url,
+                          headers=headers,
+                          params={"after": after},
+                          allow_redirects=False)
+    if result.status_code != 200:
         return None
-    
-    data = response.json().get("data", {}).get("children", [])
-    
-    if not data:
-        return counts
-    
-    for post in data:
-        title = post.get("data", {}).get("title", "").lower()
-        for word in word_list:
-            word_lower = word.lower()
-            counts[word_lower] += title.count(word_lower)
-
-    after = data[-1].get("data", {}).get("name")
-    return count_words(subreddit, word_list, after, counts)
-
-if __name__ == "__main__":
-    subreddit = input("Enter subreddit: ")
-    words = input("Enter words (comma-separated): ").split(',')
-    word_counts = count_words(subreddit, words)
-    
-    if word_counts is None:
-        print(f"Invalid subreddit: {subreddit}")
+    body = json.loads(result.text)
+    if body["data"]["after"] is not None:
+        newlist = word_list
+        if type(word_list[0]) is str:
+            temp = []
+            for i in word_list:
+                if not any(j['key'].lower() == i.lower() for j in temp):
+                    temp.append({"key": i.lower(), "count": 0, "times": 1})
+                else:
+                    item = list(filter(
+                                lambda search: search['key'] == i.lower(),
+                                temp))
+                    if len(item) > 0:
+                        item[0]["times"] = item[0]["times"] + 1
+            newlist = temp
+        for i in newlist:
+            for j in body["data"]["children"]:
+                for k in j["data"]["title"].lower().split():
+                    if i["key"] == k:
+                        i["count"] = i["count"] + 1
+        return count_words(subreddit, newlist, body["data"]["after"])
     else:
-        for word, count in word_counts.items():
-            print(f"{word.strip()}: {count}")
-
-   
+        newlist = word_list
+        if type(word_list[0]) is str:
+            temp = []
+            for i in word_list:
+                if not any(j['key'].lower() == i.lower() for j in temp):
+                    temp.append({"key": i.lower(), "count": 0, "times": 1})
+                else:
+                    item = list(filter(
+                                lambda search: search['key'] == i.lower(),
+                                temp))
+                    if len(item) > 0:
+                        item[0]["times"] = item[0]["times"] + 1
+            newlist = temp
+        for i in newlist:
+            for j in body["data"]["children"]:
+                for k in j["data"]["title"].lower().split():
+                    if i["key"] == k:
+                        i["count"] = i["count"] + 1
+        key = operator.itemgetter("key")
+        sorted_list = sorted(word_list, key=key)
+        key = operator.itemgetter("count")
+        sorted_list = sorted(sorted_list, key=key, reverse=True)
+        word_list = sorted_list
+        for i in sorted_list:
+            if i["count"] > 0:
+                print("{}: {}".format(i["key"], i["count"] * i["times"]))
+        return   
