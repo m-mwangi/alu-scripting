@@ -24,19 +24,22 @@ def count_words(subreddit, word_list, after=None, word_count=None):
     posts = data['data']['children']
 
     for post in posts:
-        title = post['data']['title'].lower().split()
+        title = post['data']['title']
         for word in word_list:
-            word_count[word.lower()] = word_count.get(word.lower(), 0) + title.count(word.lower())
+            count = title.lower().count(word.lower())
+            if word in word_count:
+                word_count[word] += count
+            else:
+                word_count[word] = count
 
     after = data['data']['after']
-
     if after is not None:
         count_words(subreddit, word_list, after, word_count)
-    else:
-        sorted_word_count = sorted(word_count.items(), key=lambda x: (-x[1], x[0].lower()))
-        for word, count in sorted_word_count:
-            print('{}: {}'.format(word, count))
+
+    return word_count
 
 
-if __name__ == '__main__':
-    count_words('programming', ['react', 'python', 'java', 'javascript', 'scala', 'no_results_for_this_one'])
+subreddit = 'unpopular'
+word_list = ['down', 'vote', 'downvote', 'you', 'her', 'unpopular', 'politics']
+word_count = count_words(subreddit, word_list)
+print(word_count)
