@@ -4,6 +4,7 @@
 import json
 import requests
 
+
 def count_words(subreddit, word_list, after=None, word_count=None):
     if word_count is None:
         word_count = {}
@@ -32,10 +33,10 @@ def count_words(subreddit, word_list, after=None, word_count=None):
     if after is not None:
         count_words(subreddit, word_list, after, word_count)
     else:
-        sorted_word_count = sorted(word_count.items(), key=lambda x: (-x[1], x[0]))
-        sorted_word_count = sorted(sorted_word_count, key=lambda x: x[0])  # Sort alphabetically
+        sorted_word_count = sorted(word_count.items(), key=lambda x: (-x[1], x[0].lower()))
         for word, count in sorted_word_count:
             print('{}: {}'.format(word.lower(), count))
+
 
 if __name__ == '__main__':
     count_words('programming', ['react', 'python', 'java', 'javascript', 'scala', 'no_results_for_this_one'])
