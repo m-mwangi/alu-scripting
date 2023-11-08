@@ -5,41 +5,47 @@ import json
 import requests
 
 
-def count_words(subreddit, word_list, after=None, word_count=None):
-    if word_count is None:
-        word_count = {}
+def count_words(subreddit, word_list, after='', hot_list=[]):
+    """Function that queries the Reddit API."""
+    if after == '':
+        hot_list = [0] * len(word_list)
+    url = "https://www.reddit.com/r/{}/hot.json" \
+        .format(subreddit)
+    request = requests.get(url, params={'after': after},
+                           allow_redirects=False,
+                           headers={'User-Agent': 'Mozilla/5.0'})
+    if request.status_code == 200:
+        data = request.json()
 
-    if after is None:
-        url = 'https://www.reddit.com/r/{}/hot/.json'.format(subreddit)
-    else:
-        url = 'https://www.reddit.com/r/{}/hot/.json?after={}'.format(subreddit, after)
+        for topic in (data['data']['children']):
+            for word in topic['data']['title'].split():
+                for i in range(len(word_list)):
+                    if word_list[i].lower() == word.lower():
+                        hot_list[i] += 1
 
-    headers = {'User-agent': 'Mozilla/5.0'}
-    response = requests.get(url, headers=headers, allow_redirects=False)
+        after = data['data']['after']
+        if after is None:
+            save = []
+            for i in range(len(word_list)):
+                for j in range(i + 1, len(word_list)):
+                    if word_list[i].lower() == word_list[j].lower():
+                        save.append(j)
+                        hot_list[i] += hot_list[j]
 
-    if response.status_code != 200:
-        return
+            for i in range(len(word_list)):
+                for j in range(i, len(word_list)):
+                    if (hot_list[j] > hot_list[i] or
+                            (word_list[i] > word_list[j] and
+                             hot_list[j] == hot_list[i])):
+                        a = hot_list[i]
+                        hot_list[i] = hot_list[j]
+                        hot_list[j] = a
+                        a = word_list[i]
+                        word_list[i] = word_list[j]
+                        word_list[j] = a
 
-    data = response.json()
-    posts = data['data']['children']
-
-    for post in posts:
-        title = post['data']['title']
-        for word in word_list:
-            count = title.lower().count(word.lower())
-            if word in word_count:
-                word_count[word] += count
-            else:
-                word_count[word] = count
-
-    after = data['data']['after']
-    if after is not None:
-        count_words(subreddit, word_list, after, word_count)
-
-    return word_count
-
-
-subreddit = 'unpopular'
-word_list = ['down', 'vote', 'downvote', 'you', 'her', 'unpopular', 'politics']
-word_count = count_words(subreddit, word_list)
-print(word_count)
+            for i in range(len(word_list)):
+                if (hot_list[i] > 0) and i not in save:
+                    print("{}: {}".format(word_list[i].lower(), hot_list[i]))
+        else:
+            count_words(subreddit, word_list, after, hot_list)
