@@ -1,45 +1,44 @@
 #!/usr/bin/python3
-"""
-Queries the Reddit API and returns the number of subscribers
-for a given subreddit
-"""
+'''a recursive function that queries the Reddit API,
+ parses the title of all hot articles, and prints a
+ sorted count of given keywords
+'''
 import requests
 
-def count_words(subreddit, word_list, after=None, counts=None):
-    if counts is None:
-        counts = {word.lower(): 0 for word in word_list}
-    
-    headers = {"User-Agent": "Mozilla/5.0"}
-    params = {"after": after, "limit": 100}
-    url = f"https://www.reddit.com/r/{subreddit}/hot/.json"
-    response = requests.get(url, headers=headers, params=params,
-                            allow_redirects=False)
-    
-    if response.status_code != 200:
+
+def count_words(subreddit, word_list, fullname="", count=0, hash_table={}):
+    '''fetches all hot posts in a subreddit
+    Return:
+        None - if subreddit is invalid
+    '''
+    if subreddit is None or not isinstance(subreddit, str) or \
+       word_list is None or word_list == []:
+        return
+    url = 'https://www.reddit.com/r/{}/hot/.json'.format(subreddit)
+    params = {'after': fullname, 'limit': 100, 'count': count}
+    headers = {'user-agent': 'Mozilla/5.0 \
+(Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0'}
+    info = requests.get(url, headers=headers,
+                        params=params, allow_redirects=False)
+    if info.status_code != 200:
         return None
-    
-    data = response.json().get("data", {}).get("children", [])
-    
-    if not data:
-        return counts
-    
-    for post in data:
-        title = post.get("data", {}).get("title", "").lower()
+    info_json = info.json()
+    results = info_json.get('data').get('children')
+    new_packet = [post.get('data').get('title') for post in results]
+    for title in new_packet:
         for word in word_list:
-            word_lower = word.lower()
-            counts[word_lower] += title.count(word_lower)
-
-    after = data[-1].get("data", {}).get("name")
-    return count_words(subreddit, word_list, after, counts)
-
-if __name__ == "__main__":
-    subreddit = input("Enter subreddit: ").strip()
-    words = input("Enter words (comma-separated): ").split(',')
-    word_counts = count_words(subreddit, words)
-    
-    if word_counts is None:
-        print(f"Invalid subreddit: {subreddit}")
+            word = word.lower()
+            formatted_title = title.lower().split(" ")
+            if word in formatted_title:
+                if (word in hash_table.keys()):
+                    hash_table[word] += formatted_title.count(word)
+                else:
+                    hash_table[word] = formatted_title.count(word)
+    after = info_json.get('data').get('after', None)
+    dist = info_json.get('data').get('dist')
+    count += dist
+    if after:
+        count_words(subreddit, word_list, after, count, hash_table)
     else:
-        for word, count in word_counts.items():
-            print(f"{word.strip()}: {count}")
-   
+        {print('{}: {}'.format(key, value)) for
+         key, value in sorted(hash_table.items(), key=lambda i: (-i[1], i[0]))}
